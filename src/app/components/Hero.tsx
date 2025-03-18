@@ -1,61 +1,80 @@
 "use client"
-import React, { useEffect, useRef, useState } from 'react'
-import Button from './Button';
-import { TiLocationArrow } from 'react-icons/ti';
-import { useGSAP } from '@gsap/react';
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
-import gsap from 'gsap';
+import { TiLocationArrow } from "react-icons/ti";
+import { useEffect, useRef, useState } from "react";
+
+import Button from "./Button";
+import VideoPreview from "./VideoPreview";
 
 gsap.registerPlugin(ScrollTrigger);
+
 const Hero = () => {
     const [currentIndex, setCurrentIndex] = useState<number>(1);
     const [hasClicked, setHasClicked] = useState<boolean>(false);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [loadedVideos, setLoadedVideos] = useState<number>(0);
+
+    const [loading, setLoading] = useState<boolean>(true);
+    const [loadedVideos, setLoadedVideos] = useState(0);
+
     const totalVideos = 4;
-    const nextVideoRef = useRef<HTMLVideoElement>(null);
-    const upcomingVideoIndex = (currentIndex % totalVideos) + 1;
-    
+    const nextVdRef = useRef<HTMLVideoElement>(null);
+    const currentVdRef = useRef<HTMLVideoElement>(null);
+    const hiddenVdRef = useRef<HTMLVideoElement>(null);
+
+    const handleVideoLoad = () => {
+        setLoadedVideos((prev) => prev + 1);
+    };
+
     useEffect(() => {
-        if (loadedVideos === totalVideos - 1) {
-            setIsLoading(false);
+        const checkCachedVideos = () => {
+            for (let i = 1; i <= totalVideos; i++) {
+                const video = document.createElement('video');
+                video.src = `/videos/hero-${i}.mp4`;
+                video.onloadeddata = () => {
+                    handleVideoLoad();
+                };
+            }
+        };
+        
+        checkCachedVideos();
+        if (loadedVideos >= totalVideos - 2) {
+            setLoading(false);
         }
     }, [loadedVideos]);
-    // This is like a magic spell that watches when you click on a video
-    // It's waiting for you to say "I want to see the next video!"
-    useGSAP(() => {
-        // First, we check if you clicked the video
-        if (hasClicked) {
-            // When you click, we make the next video visible
-            // It's like taking a blanket off to show what's underneath!
-            gsap.set('#next-video', {
-                visibility: 'visible',
-            })
 
-            // Then we make the next video grow big and fill the screen
-            // Like when you blow up a balloon, it gets bigger and bigger!
-            gsap.to('#next-video', {
-                transformOrigin: 'center center', // This tells where to start growing from
-                scale: 1,                        // How big it should get
-                width: '100%',                   // Make it as wide as the screen
-                height: '100%',                  // Make it as tall as the screen
-                duration: 1,                     // Takes 1 second to grow
-                ease: 'power1.inOut',           // Makes the growing look smooth
-                onStart: () => {                 // When it starts growing...
-                    nextVideoRef.current?.play();// Start playing the video!
-                },
-            })
+    const handleMiniVdClick = () => {
+        setHasClicked(true);
 
-            // And the current video shrinks away
-            // Like when you squeeze a sponge, it gets smaller!
-            gsap.from('#current-video', {
-                transformOrigin: 'center center', // Start shrinking from the middle
-                scale: 0,                        // Shrink down to nothing for the start of the animation
-                duration: 1.5,                   // Takes 1.5 seconds to shrink
-                ease: 'power1.inOut',           // Makes the shrinking look smooth
-            })
+        setCurrentIndex((prevIndex) => (prevIndex % totalVideos) + 1);
+    };
+
+    useGSAP(
+        () => {
+            if (hasClicked) {
+                gsap.set("#next-video", { visibility: "visible" });
+                gsap.to("#next-video", {
+                    transformOrigin: "center center",
+                    scale: 1,
+                    width: "100%",
+                    height: "100%",
+                    duration: 1,
+                    ease: "power1.inOut",
+                    onStart: () => { nextVdRef.current?.play() }
+                });
+                gsap.from("#current-video", {
+                    transformOrigin: "center center",
+                    scale: 0,
+                    duration: 1.5,
+                    ease: "power1.inOut",
+                });
+            }
+        },
+        {
+            dependencies: [currentIndex],
+            revertOnUpdate: true,
         }
-    }, { dependencies: [currentIndex], revertOnUpdate: true })
+    );
 
     useGSAP(() => {
         gsap.set("#video-frame", {
@@ -73,25 +92,13 @@ const Hero = () => {
                 scrub: true,
             },
         });
-    })
+    });
 
-   
-    const handleMiniVideoClick = () => {
-        setHasClicked(true);
+    const getVideoSrc = (index: number) => `videos/hero-${index}.mp4`;
 
-        setCurrentIndex(upcomingVideoIndex);
-    }
-    const getVideoSrc = (index: number) => {
-        return `/videos/hero-${index}.mp4`;
-    }
-    const handleVideoLoad = () => {
-        setLoadedVideos((prevLoadedVideos) => prevLoadedVideos + 1);
-    }
-    console.log(loadedVideos)
-    console.log(isLoading)
     return (
-        <div className='relative h-dvh w-screen overflow-x-hidden'>
-            {isLoading && (
+        <div className="relative h-dvh w-screen overflow-x-hidden">
+            {loading && (
                 <div className="flex-center absolute z-[100] h-dvh w-screen overflow-hidden bg-violet-50">
                     <div className="three-body">
                         <div className="three-body__dot"></div>
@@ -100,38 +107,85 @@ const Hero = () => {
                     </div>
                 </div>
             )}
-            <div id='video-frame' className=' relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-blue-75'>
+
+            <div
+                id="video-frame"
+                className="relative z-10 h-dvh w-screen overflow-hidden rounded-lg bg-blue-75"
+            >
                 <div>
-                    <div className='mask-clip-path absolute-center absolute z-50 size-64 cursor-pointer overflow-hidden rounded-lg'>
-                        <div onClick={handleMiniVideoClick} className='origin-center scale-50 opacity-0 transition-all duration-500 ease-in hover:scale-100 hover:opacity-100'>
-                            {/* This is the video that you hover over to see the next video*/}
-                            <video ref={nextVideoRef} src={getVideoSrc(upcomingVideoIndex)} loop muted id='current-video' className='size-64 origin-center scale-150 object-cover object-center' onLoadedData={handleVideoLoad} />
-                        </div>
+                    <div className="mask-clip-path absolute-center absolute z-50 size-64 cursor-pointer overflow-hidden rounded-lg">
+                        <VideoPreview>
+                            <div
+                                onClick={handleMiniVdClick}
+                                className="origin-center scale-50 opacity-0 transition-all duration-500 ease-in hover:scale-100 hover:opacity-100"
+                            >
+                                <video
+                                    preload="auto"
+                                    ref={currentVdRef}
+                                    src={getVideoSrc((currentIndex % totalVideos) + 1)}
+                                    loop
+                                    muted
+                                    id="current-video"
+                                    className="size-64 origin-center scale-150 object-cover object-center"
+                                    onLoadedData={handleVideoLoad}
+                                />
+                            </div>
+                        </VideoPreview>
                     </div>
-                    {/* This is the video that slowly grows in size and pops up when you click on the mini video*/}
-                    <video ref={nextVideoRef} src={getVideoSrc(currentIndex)} loop muted id='next-video' className='absolute-center invisible absolute z-20 size-64 object-cover object-center' onLoadedData={handleVideoLoad} />
-                    {/* This is the video that gets into the background in fullscreen mode first*/}
-                    <video src={getVideoSrc(currentIndex === totalVideos - 1 ? 1 : currentIndex)} autoPlay loop muted className='absolute left-0 top-0 size-full object-cover object-center' onLoadedData={handleVideoLoad} />
+
+                    <video
+                        ref={nextVdRef}
+                        preload="auto"
+                        src={getVideoSrc(currentIndex)}
+                        loop
+                        muted
+                        id="next-video"
+                        className="absolute-center invisible absolute z-20 size-64 object-cover object-center"
+                        onLoadedData={handleVideoLoad}
+                    />
+                    <video
+                        ref={hiddenVdRef}
+                        preload="auto"
+                        src={getVideoSrc(
+                            currentIndex === totalVideos - 1 ? 1 : currentIndex
+                        )}
+                        autoPlay
+                        loop
+                        muted
+                        className="absolute left-0 top-0 size-full object-cover object-center"
+                        onLoadedData={handleVideoLoad}
+                    />
                 </div>
-                <h1 className='special-font hero-heading absolute bottom-5 right-5 z-40 text-blue-75 '>
-                    G<b>a</b>ming
+
+                <h1 className="special-font hero-heading absolute bottom-5 right-5 z-40 text-blue-75">
+                    G<b>A</b>MING
                 </h1>
-                <div className='absolute left-0 top-0 z-40 size-full'>
-                    <div className='mt-24 px-5 sm:px-10'>
-                        <h1 className='special-font hero-heading text-blue-100'>redefi<b>n</b>e</h1>
-                        <p className='mb-5 max-w-64 font-robert-regular text-blue-100'>
-                            Enter the Metagame Layer <br />
-                            Unleash the Play Economy
+
+                <div className="absolute left-0 top-0 z-40 size-full">
+                    <div className="mt-24 px-5 sm:px-10">
+                        <h1 className="special-font hero-heading text-blue-100">
+                            redefi<b>n</b>e
+                        </h1>
+
+                        <p className="mb-5 max-w-64 font-robert-regular text-blue-100">
+                            Enter the Metagame Layer <br /> Unleash the Play Economy
                         </p>
-                        <Button id='watch-trailer' title='Watch Trailer' leftIcon={<TiLocationArrow />} containerClass='!bg-yellow-300  flex-center gap-1 ' />
+
+                        <Button
+                            id="watch-trailer"
+                            title="Watch trailer"
+                            leftIcon={<TiLocationArrow />}
+                            containerClass="bg-yellow-300 flex-center gap-1"
+                        />
                     </div>
                 </div>
             </div>
-            <h1 className='special-font hero-heading absolute bottom-5 right-5 text-black '>
-                G<b>a</b>ming
+
+            <h1 className="special-font hero-heading absolute bottom-5 right-5 text-black">
+                G<b>A</b>MING
             </h1>
         </div>
-    )
-}
+    );
+};
 
-export default Hero
+export default Hero;
