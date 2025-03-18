@@ -4,7 +4,7 @@ import NavBar from "./components/NavBar";
 import Features from "./components/Features";
 import Story from "./components/Story";
 import Contact from "./components/Contact";
-
+import Footer from "./components/Footer";
 export default function Home() {
   return (
     <main className="relative min-h-screen w-screen overflow-x-hidden">
@@ -14,6 +14,7 @@ export default function Home() {
       <Features />
       <Story />
       <Contact />
+      <Footer />
     </main>
   );
 }
